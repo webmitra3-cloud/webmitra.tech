@@ -1,0 +1,248 @@
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: 210 25% 98%;
+  --foreground: 219 35% 13%;
+
+  --card: 0 0% 100%;
+  --card-foreground: 219 35% 13%;
+
+  --primary: 210 89% 39%;
+  --primary-foreground: 0 0% 100%;
+
+  --secondary: 210 58% 95%;
+  --secondary-foreground: 219 35% 16%;
+
+  --muted: 212 33% 94%;
+  --muted-foreground: 217 18% 40%;
+
+  --accent: 30 100% 94%;
+  --accent-foreground: 24 95% 38%;
+
+  --destructive: 0 68% 48%;
+  --destructive-foreground: 210 40% 98%;
+
+  --border: 214 23% 84%;
+  --input: 214 23% 84%;
+  --ring: 210 89% 44%;
+
+  --brand-blue: 210 89% 39%;
+  --brand-orange: 32 100% 48%;
+
+  color-scheme: light;
+}
+
+.dark {
+  --background: 221 34% 8%;
+  --foreground: 210 34% 96%;
+
+  --card: 221 30% 11%;
+  --card-foreground: 210 34% 96%;
+
+  --primary: 209 88% 63%;
+  --primary-foreground: 223 37% 12%;
+
+  --secondary: 220 30% 16%;
+  --secondary-foreground: 210 34% 96%;
+
+  --muted: 220 24% 17%;
+  --muted-foreground: 216 18% 70%;
+
+  --accent: 26 66% 20%;
+  --accent-foreground: 32 100% 66%;
+
+  --destructive: 0 75% 56%;
+  --destructive-foreground: 210 40% 96%;
+
+  --border: 220 20% 24%;
+  --input: 220 20% 24%;
+  --ring: 209 88% 63%;
+
+  --brand-blue: 209 88% 63%;
+  --brand-orange: 32 100% 58%;
+
+  color-scheme: dark;
+}
+
+* {
+  @apply border-border;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  @apply bg-background text-foreground antialiased;
+  margin: 0;
+  min-height: 100vh;
+  font-feature-settings: "cv11", "ss01";
+  font-family: "DM Sans", "Segoe UI", sans-serif;
+  letter-spacing: 0.01em;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: "Space Grotesk", "DM Sans", "Segoe UI", sans-serif;
+  letter-spacing: -0.015em;
+}
+
+a {
+  @apply text-inherit no-underline;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+img {
+  max-width: 100%;
+  display: block;
+}
+
+::selection {
+  background: hsl(var(--brand-orange) / 0.2);
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: hsl(var(--secondary));
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--border));
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground) / 0.7);
+}
+
+:focus-visible {
+  @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
+}
+
+.surface {
+  @apply rounded-2xl border border-border/80 bg-card/95 shadow-soft;
+}
+
+.reveal-in {
+  opacity: 0;
+  transform: translateY(12px);
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+
+.reveal-in[data-visible="true"] {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.logo-marquee {
+  display: flex;
+  width: max-content;
+  animation: logo-scroll 26s linear infinite;
+}
+
+.logo-marquee:hover {
+  animation-play-state: paused;
+}
+
+.page-enter {
+  animation: page-enter 0.3s ease both;
+}
+
+.bg-grid-soft {
+  background-image:
+    linear-gradient(to right, hsl(var(--border) / 0.35) 1px, transparent 1px),
+    linear-gradient(to bottom, hsl(var(--border) / 0.3) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+
+.section-wrap {
+  @apply relative overflow-hidden rounded-3xl border border-border/70 bg-card/70 shadow-soft;
+}
+
+.section-wrap::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  border: 1px solid hsl(var(--background) / 0.45);
+}
+
+.admin-shell .admin-content > * {
+  animation: page-enter 0.25s ease both;
+}
+
+.admin-shell .admin-content h1 {
+  font-size: clamp(1.45rem, 2.5vw, 2rem);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.admin-shell .admin-content .rounded-xl,
+.admin-shell .admin-content .rounded-2xl {
+  backdrop-filter: blur(4px);
+}
+
+@keyframes page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes logo-scroll {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  .reveal-in {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+
+  .logo-marquee {
+    animation: none;
+  }
+
+  .page-enter {
+    animation: none;
+  }
+}
