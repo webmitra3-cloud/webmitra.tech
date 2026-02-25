@@ -22,7 +22,7 @@ import {
   User,
 } from "@/types";
 
-type RetryConfig = InternalAxiosRequestConfig & { _retry?: boolean };
+type RetryConfig = InternalAxiosRequestConfig & { _retry?: boolean; _csrfRetry?: boolean };
 
 export const api = axios.create({
   baseURL: API_BASE_URL,
@@ -31,22 +31,54 @@ export const api = axios.create({
 
 let isRefreshing = false;
 let pendingQueue: Array<(token: string | null) => void> = [];
+let pendingCsrfPromise: Promise<string | null> | null = null;
 
 function flushQueue(token: string | null) {
   pendingQueue.forEach((resolve) => resolve(token));
   pendingQueue = [];
 }
 
-api.interceptors.request.use((config) => {
+function isWriteMethod(method?: string) {
+  return ["post", "put", "patch", "delete"].includes((method || "").toLowerCase());
+}
+
+async function requestCsrfToken(): Promise<string | null> {
+  try {
+    const response = await api.get<{ csrfToken: string }>("/auth/csrf");
+    setCsrfToken(response.data.csrfToken);
+    return response.data.csrfToken;
+  } catch {
+    return null;
+  }
+}
+
+async function ensureCsrfToken() {
+  const existingToken = getCsrfToken();
+  if (existingToken) return existingToken;
+
+  if (!pendingCsrfPromise) {
+    pendingCsrfPromise = requestCsrfToken().finally(() => {
+      pendingCsrfPromise = null;
+    });
+  }
+
+  return pendingCsrfPromise;
+}
+
+api.interceptors.request.use(async (config) => {
   const accessToken = getAccessToken();
-  const csrfToken = getCsrfToken();
+  const isWrite = isWriteMethod(config.method);
+  const isCsrfRoute = config.url?.includes("/auth/csrf");
 
   if (accessToken) {
     config.headers.Authorization = `Bearer ${accessToken}`;
   }
 
-  if (csrfToken && ["post", "put", "patch", "delete"].includes((config.method || "").toLowerCase())) {
-    config.headers["x-csrf-token"] = csrfToken;
+  if (isWrite && !isCsrfRoute) {
+    const csrfToken = (await ensureCsrfToken()) || getCsrfToken();
+    if (csrfToken) {
+      config.headers["X-CSRF-Token"] = csrfToken;
+    }
   }
 
   return config;
@@ -69,11 +101,32 @@ api.interceptors.response.use(
   async (error: AxiosError) => {
     const originalConfig = error.config as RetryConfig | undefined;
 
-    if (!originalConfig || originalConfig._retry) {
+    if (!originalConfig) {
       return Promise.reject(error);
     }
 
-    const isUnauthorized = error.response?.status === 401;
+    const statusCode = error.response?.status;
+    const responseMessage =
+      typeof error.response?.data === "object" && error.response?.data !== null && "message" in error.response.data
+        ? String((error.response.data as { message?: unknown }).message || "")
+        : "";
+    const isCsrfError = statusCode === 403 && /csrf/i.test(responseMessage);
+
+    if (isCsrfError && !originalConfig._csrfRetry && !originalConfig.url?.includes("/auth/csrf")) {
+      originalConfig._csrfRetry = true;
+      const newCsrfToken = await getCsrfTokenFromServer().catch(() => null);
+      if (newCsrfToken) {
+        originalConfig.headers["X-CSRF-Token"] = newCsrfToken;
+        return api(originalConfig);
+      }
+      return Promise.reject(error);
+    }
+
+    if (originalConfig._retry) {
+      return Promise.reject(error);
+    }
+
+    const isUnauthorized = statusCode === 401;
     const authRoute = originalConfig.url?.includes("/auth/login") || originalConfig.url?.includes("/auth/refresh");
     if (!isUnauthorized || authRoute) {
       return Promise.reject(error);
@@ -109,9 +162,9 @@ api.interceptors.response.use(
 );
 
 export async function getCsrfTokenFromServer() {
-  const response = await api.get<{ csrfToken: string }>("/auth/csrf");
-  setCsrfToken(response.data.csrfToken);
-  return response.data.csrfToken;
+  const token = await ensureCsrfToken();
+  if (token) return token;
+  throw new Error("Failed to fetch CSRF token");
 }
 
 export async function loginRequest(payload: { email: string; password: string }) {

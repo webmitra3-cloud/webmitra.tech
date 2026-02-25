@@ -4,19 +4,14 @@ const DEFAULT_API_ORIGIN = "http://localhost:5000";
 
 export function normalizeApiOrigin(url?: string): string {
   const value = (url || "").trim();
-  return value.replace(/\/+$/, "");
+  return value.replace(/\/+$/, "").replace(/\/api$/i, "");
 }
 
-const configuredOrigin =
-  import.meta.env.VITE_API_URL ||
-  import.meta.env.VITE_API_BASE_URL ||
-  DEFAULT_API_ORIGIN;
+const configuredOrigin = import.meta.env.VITE_API_URL || DEFAULT_API_ORIGIN;
 
 const normalizedOrigin = normalizeApiOrigin(configuredOrigin);
 
-export const API_BASE_URL = normalizedOrigin.endsWith("/api")
-  ? normalizedOrigin
-  : `${normalizedOrigin}/api`;
+export const API_BASE_URL = `${normalizedOrigin}/api`;
 
 export const defaultSettings: SiteSettings = {
   companyName: "WebMitra.Tech",

@@ -28,34 +28,19 @@ async function issueSession(res: Response, user: { userId: string; role: string 
 }
 
 export const getCsrf = asyncHandler(async (req: Request, res: Response) => {
-  const csrfToken = generateCsrfToken();
-  const baseMeta = {
-    route: "/api/auth/csrf",
-    ip: req.ip,
-    origin: req.headers.origin || "",
-  };
-
   try {
+    const csrfToken = generateCsrfToken();
     res.cookie(env.CSRF_COOKIE_NAME, csrfToken, getCsrfCookieOptions(refreshTokenMaxAge));
+    res.json({ csrfToken });
   } catch (error) {
-    logger.error("Failed to set CSRF cookie with configured options", {
-      ...baseMeta,
+    logger.error("Failed to initialize CSRF cookie", {
+      route: "/api/auth/csrf",
+      ip: req.ip,
+      origin: req.headers.origin || "",
       error: error instanceof Error ? error.message : String(error),
     });
-
-    try {
-      // Fallback for misconfigured COOKIE_DOMAIN in production.
-      res.cookie(env.CSRF_COOKIE_NAME, csrfToken, getCsrfCookieOptions(refreshTokenMaxAge, { omitDomain: true }));
-      logger.warn("CSRF cookie fallback applied without domain", baseMeta);
-    } catch (fallbackError) {
-      logger.error("Failed to set CSRF cookie fallback", {
-        ...baseMeta,
-        error: fallbackError instanceof Error ? fallbackError.message : String(fallbackError),
-      });
-    }
+    throw new AppError("Failed to initialize CSRF protection", 500);
   }
-
-  res.json({ csrfToken });
 });
 
 export const login = asyncHandler(async (req: Request, res: Response) => {
