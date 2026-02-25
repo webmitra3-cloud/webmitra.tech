@@ -10,6 +10,7 @@ import { compareHash, hashValue } from "../utils/password";
 import { parseDurationToMs } from "../utils/time";
 import { logFailedAttempt } from "../services/audit.service";
 import { FAILED_ATTEMPT_TYPE } from "../constants";
+import { logger } from "../utils/logger";
 
 const refreshTokenMaxAge = parseDurationToMs(env.JWT_REFRESH_EXPIRES_IN);
 
@@ -26,9 +27,34 @@ async function issueSession(res: Response, user: { userId: string; role: string 
   return { accessToken, csrfToken };
 }
 
-export const getCsrf = asyncHandler(async (_req: Request, res: Response) => {
+export const getCsrf = asyncHandler(async (req: Request, res: Response) => {
   const csrfToken = generateCsrfToken();
-  res.cookie(env.CSRF_COOKIE_NAME, csrfToken, getCsrfCookieOptions(refreshTokenMaxAge));
+  const baseMeta = {
+    route: "/api/auth/csrf",
+    ip: req.ip,
+    origin: req.headers.origin || "",
+  };
+
+  try {
+    res.cookie(env.CSRF_COOKIE_NAME, csrfToken, getCsrfCookieOptions(refreshTokenMaxAge));
+  } catch (error) {
+    logger.error("Failed to set CSRF cookie with configured options", {
+      ...baseMeta,
+      error: error instanceof Error ? error.message : String(error),
+    });
+
+    try {
+      // Fallback for misconfigured COOKIE_DOMAIN in production.
+      res.cookie(env.CSRF_COOKIE_NAME, csrfToken, getCsrfCookieOptions(refreshTokenMaxAge, { omitDomain: true }));
+      logger.warn("CSRF cookie fallback applied without domain", baseMeta);
+    } catch (fallbackError) {
+      logger.error("Failed to set CSRF cookie fallback", {
+        ...baseMeta,
+        error: fallbackError instanceof Error ? fallbackError.message : String(fallbackError),
+      });
+    }
+  }
+
   res.json({ csrfToken });
 });
 
