@@ -7,6 +7,8 @@ export function requireCsrf(req: Request, _res: Response, next: NextFunction) {
   const cookieToken = req.cookies?.[env.CSRF_COOKIE_NAME];
   const headerToken = req.headers["x-csrf-token"];
   const isWriteMethod = ["POST", "PUT", "PATCH", "DELETE"].includes(req.method);
+  const hasCookie = Boolean(cookieToken);
+  const hasHeader = Boolean(headerToken && (!Array.isArray(headerToken) || headerToken.length > 0));
 
   if (!isWriteMethod) {
     return next();
@@ -19,6 +21,8 @@ export function requireCsrf(req: Request, _res: Response, next: NextFunction) {
       ip: req.ip,
       origin: req.headers.origin || "",
       cookieName: env.CSRF_COOKIE_NAME,
+      hasCookie,
+      hasHeader,
     });
     return next(new AppError("CSRF cookie missing. Please refresh and try again.", 403));
   }
@@ -30,6 +34,8 @@ export function requireCsrf(req: Request, _res: Response, next: NextFunction) {
       ip: req.ip,
       origin: req.headers.origin || "",
       headerName: "X-CSRF-Token",
+      hasCookie,
+      hasHeader,
     });
     return next(new AppError("CSRF token missing. Please refresh and try again.", 403));
   }
@@ -41,6 +47,8 @@ export function requireCsrf(req: Request, _res: Response, next: NextFunction) {
       method: req.method,
       ip: req.ip,
       origin: req.headers.origin || "",
+      hasCookie,
+      hasHeader,
     });
     return next(new AppError("CSRF token invalid. Please refresh and try again.", 403));
   }

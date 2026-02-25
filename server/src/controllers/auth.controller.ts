@@ -3,7 +3,7 @@ import { env } from "../config/env";
 import { UserModel } from "../models";
 import { AppError } from "../utils/AppError";
 import { asyncHandler } from "../utils/asyncHandler";
-import { getClearCookieOptions, getCsrfCookieOptions, getRefreshCookieOptions } from "../utils/cookies";
+import { getClearCookieOptions, getRefreshCookieOptions } from "../utils/cookies";
 import { generateCsrfToken } from "../utils/csrf";
 import { signAccessToken, signRefreshToken, verifyRefreshToken } from "../utils/jwt";
 import { compareHash, hashValue } from "../utils/password";
@@ -11,8 +11,21 @@ import { parseDurationToMs } from "../utils/time";
 import { logFailedAttempt } from "../services/audit.service";
 import { FAILED_ATTEMPT_TYPE } from "../constants";
 import { logger } from "../utils/logger";
+import { CookieOptions } from "express";
 
 const refreshTokenMaxAge = parseDurationToMs(env.JWT_REFRESH_EXPIRES_IN);
+
+function getCsrfCookieOptions(maxAgeMs: number): CookieOptions {
+  const isProd = process.env.NODE_ENV === "production";
+
+  return {
+    secure: isProd,
+    sameSite: isProd ? "none" : "lax",
+    path: "/",
+    httpOnly: false,
+    maxAge: maxAgeMs,
+  };
+}
 
 async function issueSession(res: Response, user: { userId: string; role: string }) {
   const accessToken = signAccessToken(user);
