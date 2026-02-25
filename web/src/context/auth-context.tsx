@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { clearSession, getAccessToken } from "@/lib/auth-storage";
-import { getCsrfTokenFromServer, loginRequest, logoutRequest, meRequest } from "@/lib/api";
+import { loginRequest, logoutRequest, meRequest } from "@/lib/api";
+import { bootstrapCsrfToken } from "@/lib/csrf-bootstrap";
 import { User } from "@/types";
 
 type AuthContextValue = {
@@ -32,7 +33,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    Promise.all([getCsrfTokenFromServer(), refreshUser()]).finally(() => setLoading(false));
+    Promise.all([bootstrapCsrfToken(), refreshUser()]).finally(() => setLoading(false));
   }, []);
 
   const value = useMemo<AuthContextValue>(

@@ -1,6 +1,7 @@
 import { NextFunction, Request, Response } from "express";
 import { env } from "../config/env";
 import { AppError } from "../utils/AppError";
+import { logger } from "../utils/logger";
 
 export function requireCsrf(req: Request, _res: Response, next: NextFunction) {
   const cookieToken = req.cookies?.[env.CSRF_COOKIE_NAME];
@@ -12,16 +13,36 @@ export function requireCsrf(req: Request, _res: Response, next: NextFunction) {
   }
 
   if (!cookieToken) {
+    logger.warn("CSRF validation failed: cookie missing", {
+      route: req.originalUrl,
+      method: req.method,
+      ip: req.ip,
+      origin: req.headers.origin || "",
+      cookieName: env.CSRF_COOKIE_NAME,
+    });
     return next(new AppError("CSRF cookie missing. Please refresh and try again.", 403));
   }
 
   if (!headerToken || (Array.isArray(headerToken) && headerToken.length === 0)) {
-    return next(new AppError("CSRF token missing in X-CSRF-Token header.", 403));
+    logger.warn("CSRF validation failed: header missing", {
+      route: req.originalUrl,
+      method: req.method,
+      ip: req.ip,
+      origin: req.headers.origin || "",
+      headerName: "X-CSRF-Token",
+    });
+    return next(new AppError("CSRF token missing. Please refresh and try again.", 403));
   }
 
   const headerValue = Array.isArray(headerToken) ? headerToken[0] : headerToken;
   if (!headerValue || cookieToken !== headerValue) {
-    return next(new AppError("CSRF token mismatch. Please refresh and try again.", 403));
+    logger.warn("CSRF validation failed: token invalid", {
+      route: req.originalUrl,
+      method: req.method,
+      ip: req.ip,
+      origin: req.headers.origin || "",
+    });
+    return next(new AppError("CSRF token invalid. Please refresh and try again.", 403));
   }
 
   next();

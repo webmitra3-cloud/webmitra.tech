@@ -6,7 +6,6 @@ import {
   setAccessToken,
   setCsrfToken,
 } from "./auth-storage";
-import { API_BASE_URL } from "./constants";
 import {
   Collaboration,
   DashboardStats,
@@ -24,8 +23,15 @@ import {
 
 type RetryConfig = InternalAxiosRequestConfig & { _retry?: boolean; _csrfRetry?: boolean };
 
+function buildApiBaseUrl(origin?: string) {
+  const normalizedOrigin = (origin || "").trim().replace(/\/+$/, "");
+  return `${normalizedOrigin}/api`;
+}
+
+const apiBaseUrl = buildApiBaseUrl(import.meta.env.VITE_API_URL || "http://localhost:5000");
+
 export const api = axios.create({
-  baseURL: API_BASE_URL,
+  baseURL: apiBaseUrl,
   withCredentials: true,
 });
 
@@ -44,7 +50,10 @@ function isWriteMethod(method?: string) {
 
 async function requestCsrfToken(): Promise<string | null> {
   try {
-    const response = await api.get<{ csrfToken: string }>("/auth/csrf");
+    const response = await api.get<{ ok: boolean; csrfToken: string }>("/auth/csrf");
+    if (!response.data.ok || !response.data.csrfToken) {
+      return null;
+    }
     setCsrfToken(response.data.csrfToken);
     return response.data.csrfToken;
   } catch {
@@ -161,8 +170,8 @@ api.interceptors.response.use(
   },
 );
 
-export async function getCsrfTokenFromServer() {
-  const token = await ensureCsrfToken();
+export async function getCsrfTokenFromServer(force = true) {
+  const token = force ? await requestCsrfToken() : await ensureCsrfToken();
   if (token) return token;
   throw new Error("Failed to fetch CSRF token");
 }

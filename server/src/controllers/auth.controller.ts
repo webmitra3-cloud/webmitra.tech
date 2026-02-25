@@ -31,7 +31,7 @@ export const getCsrf = asyncHandler(async (req: Request, res: Response) => {
   try {
     const csrfToken = generateCsrfToken();
     res.cookie(env.CSRF_COOKIE_NAME, csrfToken, getCsrfCookieOptions(refreshTokenMaxAge));
-    res.json({ csrfToken });
+    res.json({ ok: true, csrfToken });
   } catch (error) {
     logger.error("Failed to initialize CSRF cookie", {
       route: "/api/auth/csrf",
@@ -74,6 +74,13 @@ export const login = asyncHandler(async (req: Request, res: Response) => {
 export const refresh = asyncHandler(async (req: Request, res: Response) => {
   const refreshToken = req.cookies?.[env.REFRESH_COOKIE_NAME];
   if (!refreshToken) {
+    logger.warn("Refresh failed: cookie missing", {
+      route: "/api/auth/refresh",
+      cookieName: env.REFRESH_COOKIE_NAME,
+      hasRefreshCookie: false,
+      ip: req.ip,
+      origin: req.headers.origin || "",
+    });
     throw new AppError("Missing refresh token", 401);
   }
 
@@ -82,11 +89,27 @@ export const refresh = asyncHandler(async (req: Request, res: Response) => {
     const decoded = verifyRefreshToken(refreshToken);
     payload = { userId: decoded.userId, role: decoded.role };
   } catch (error) {
+    logger.warn("Refresh failed: token verification failed", {
+      route: "/api/auth/refresh",
+      cookieName: env.REFRESH_COOKIE_NAME,
+      hasRefreshCookie: true,
+      ip: req.ip,
+      origin: req.headers.origin || "",
+      error: error instanceof Error ? error.message : String(error),
+    });
     throw new AppError("Invalid refresh token", 401);
   }
 
   const user = await UserModel.findById(payload.userId).select("+refreshTokenHash");
   if (!user || !user.refreshTokenHash || !(await compareHash(refreshToken, user.refreshTokenHash))) {
+    logger.warn("Refresh failed: token rejected for user", {
+      route: "/api/auth/refresh",
+      cookieName: env.REFRESH_COOKIE_NAME,
+      hasRefreshCookie: true,
+      userId: payload.userId,
+      ip: req.ip,
+      origin: req.headers.origin || "",
+    });
     throw new AppError("Refresh token rejected", 401);
   }
 

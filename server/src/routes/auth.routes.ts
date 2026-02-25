@@ -10,7 +10,8 @@ const router = Router();
 
 router.get("/csrf", getCsrf);
 router.post("/login", loginRateLimiter, validateBody(loginSchema), login);
-router.post("/refresh", requireCsrf, refresh);
+// Refresh token endpoint uses httpOnly cookie auth and should not depend on CSRF token.
+router.post("/refresh", refresh);
 router.post("/logout", requireCsrf, logout);
 router.get("/me", requireAuth, me);
 
