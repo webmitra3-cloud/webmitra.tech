@@ -1,13 +1,17 @@
 import { SiteSettings } from "@/types";
 
-const DEFAULT_API_ORIGIN = "http://localhost:5000";
+const DEFAULT_DEV_API_ORIGIN = "http://localhost:5000";
+const DEFAULT_PROD_API_ORIGIN = "https://webmitratech.onrender.com";
 
 export function normalizeApiOrigin(url?: string): string {
   const value = (url || "").trim();
   return value.replace(/\/+$/, "").replace(/\/api$/i, "");
 }
 
-const configuredOrigin = import.meta.env.VITE_API_URL || DEFAULT_API_ORIGIN;
+const configuredOrigin =
+  import.meta.env.VITE_API_URL ||
+  import.meta.env.VITE_API_BASE_URL ||
+  (import.meta.env.PROD ? DEFAULT_PROD_API_ORIGIN : DEFAULT_DEV_API_ORIGIN);
 
 const normalizedOrigin = normalizeApiOrigin(configuredOrigin);
 
