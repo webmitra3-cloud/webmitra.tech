@@ -15,19 +15,32 @@ import { CookieOptions } from "express";
 
 const refreshTokenMaxAge = parseDurationToMs(env.JWT_REFRESH_EXPIRES_IN);
 
-function getCsrfCookieOptions(maxAgeMs: number): CookieOptions {
+function isHttpsRequest(req: Request) {
+  const forwardedProto = req.headers["x-forwarded-proto"];
+  if (typeof forwardedProto === "string") {
+    return forwardedProto.split(",")[0].trim().toLowerCase() === "https";
+  }
+  if (Array.isArray(forwardedProto) && forwardedProto.length > 0) {
+    return forwardedProto[0].toLowerCase() === "https";
+  }
+  return req.secure;
+}
+
+function getCsrfCookieOptions(req: Request, maxAgeMs: number): CookieOptions {
   const isProd = process.env.NODE_ENV === "production";
+  const useCrossSiteCookie = isProd || isHttpsRequest(req);
 
   return {
-    secure: isProd,
-    sameSite: isProd ? "none" : "lax",
+    secure: useCrossSiteCookie,
+    sameSite: useCrossSiteCookie ? "none" : "lax",
     path: "/",
     httpOnly: false,
+    domain: undefined,
     maxAge: maxAgeMs,
   };
 }
 
-async function issueSession(res: Response, user: { userId: string; role: string }) {
+async function issueSession(req: Request, res: Response, user: { userId: string; role: string }) {
   const accessToken = signAccessToken(user);
   const refreshToken = signRefreshToken(user);
   const csrfToken = generateCsrfToken();
@@ -35,7 +48,7 @@ async function issueSession(res: Response, user: { userId: string; role: string 
   await UserModel.findByIdAndUpdate(user.userId, { refreshTokenHash: await hashValue(refreshToken) });
 
   res.cookie(env.REFRESH_COOKIE_NAME, refreshToken, getRefreshCookieOptions(refreshTokenMaxAge));
-  res.cookie(env.CSRF_COOKIE_NAME, csrfToken, getCsrfCookieOptions(refreshTokenMaxAge));
+  res.cookie(env.CSRF_COOKIE_NAME, csrfToken, getCsrfCookieOptions(req, refreshTokenMaxAge));
 
   return { accessToken, csrfToken };
 }
@@ -43,7 +56,7 @@ async function issueSession(res: Response, user: { userId: string; role: string 
 export const getCsrf = asyncHandler(async (req: Request, res: Response) => {
   try {
     const csrfToken = generateCsrfToken();
-    res.cookie(env.CSRF_COOKIE_NAME, csrfToken, getCsrfCookieOptions(refreshTokenMaxAge));
+    res.cookie(env.CSRF_COOKIE_NAME, csrfToken, getCsrfCookieOptions(req, refreshTokenMaxAge));
     res.json({ ok: true, csrfToken });
   } catch (error) {
     logger.error("Failed to initialize CSRF cookie", {
@@ -71,7 +84,7 @@ export const login = asyncHandler(async (req: Request, res: Response) => {
     throw new AppError("Invalid email or password", 401);
   }
 
-  const session = await issueSession(res, { userId: user.id, role: user.role });
+  const session = await issueSession(req, res, { userId: user.id, role: user.role });
   res.json({
     user: {
       _id: user.id,
@@ -126,7 +139,7 @@ export const refresh = asyncHandler(async (req: Request, res: Response) => {
     throw new AppError("Refresh token rejected", 401);
   }
 
-  const session = await issueSession(res, payload);
+  const session = await issueSession(req, res, payload);
   res.json({
     accessToken: session.accessToken,
     csrfToken: session.csrfToken,
