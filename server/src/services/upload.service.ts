@@ -6,10 +6,6 @@ import { env } from "../config/env";
 import { uploadsDir } from "../config/uploads";
 import { AppError } from "../utils/AppError";
 
-type UploadImageOptions = {
-  removeBackground?: boolean;
-};
-
 function parseDataUri(dataUri: string) {
   const match = dataUri.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$/);
   if (!match) {
@@ -20,14 +16,6 @@ function parseDataUri(dataUri: string) {
   return { base64Data, extension };
 }
 
-function toCloudinaryBgRemovedUrl(secureUrl: string) {
-  if (!secureUrl.includes("/image/upload/")) return secureUrl;
-  const [prefix, suffix] = secureUrl.split("/image/upload/");
-  if (!prefix || !suffix) return secureUrl;
-  if (suffix.startsWith("e_background_removal/")) return secureUrl;
-  return `${prefix}/image/upload/e_background_removal/f_png/${suffix}`;
-}
-
 function sanitizeFolder(folder: string) {
   const trimmed = folder.trim().toLowerCase();
   if (!trimmed) return "webmitra";
@@ -35,31 +23,16 @@ function sanitizeFolder(folder: string) {
   return trimmed.replace(/[^a-z0-9_-]/g, "-").slice(0, 64) || "webmitra";
 }
 
-export async function uploadImage(dataUri: string, folder = "webmitra", options?: UploadImageOptions): Promise<string> {
+export async function uploadImage(dataUri: string, folder = "webmitra"): Promise<string> {
   if (!dataUri) return "";
   const safeFolder = sanitizeFolder(folder);
 
   if (isCloudinaryConfigured) {
-    const shouldRemoveBackground = options?.removeBackground === true;
-
-    try {
-      const uploaded = await cloudinary.uploader.upload(dataUri, {
-        folder: safeFolder,
-        resource_type: "image",
-        ...(shouldRemoveBackground ? { background_removal: "cloudinary_ai" } : {}),
-      });
-
-      return shouldRemoveBackground ? toCloudinaryBgRemovedUrl(uploaded.secure_url) : uploaded.secure_url;
-    } catch (error) {
-      // Fallback to regular upload if background removal is unavailable on the account.
-      if (!shouldRemoveBackground) throw error;
-
-      const uploaded = await cloudinary.uploader.upload(dataUri, {
-        folder: safeFolder,
-        resource_type: "image",
-      });
-      return toCloudinaryBgRemovedUrl(uploaded.secure_url);
-    }
+    const uploaded = await cloudinary.uploader.upload(dataUri, {
+      folder: safeFolder,
+      resource_type: "image",
+    });
+    return uploaded.secure_url;
   }
 
   const { base64Data, extension } = parseDataUri(dataUri);

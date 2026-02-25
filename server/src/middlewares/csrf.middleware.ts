@@ -4,7 +4,8 @@ import { AppError } from "../utils/AppError";
 import { logger } from "../utils/logger";
 
 export function requireCsrf(req: Request, _res: Response, next: NextFunction) {
-  const cookieToken = req.cookies?.[env.CSRF_COOKIE_NAME];
+  const csrfCookieName = env.CSRF_COOKIE_NAME || "wm_csrf";
+  const cookieToken = req.cookies?.[csrfCookieName];
   const headerToken = req.headers["x-csrf-token"];
   const isWriteMethod = ["POST", "PUT", "PATCH", "DELETE"].includes(req.method);
   const hasCookie = Boolean(cookieToken);
@@ -20,7 +21,7 @@ export function requireCsrf(req: Request, _res: Response, next: NextFunction) {
       method: req.method,
       ip: req.ip,
       origin: req.headers.origin || "",
-      cookieName: env.CSRF_COOKIE_NAME,
+      cookieName: csrfCookieName,
       hasCookie,
       hasHeader,
     });

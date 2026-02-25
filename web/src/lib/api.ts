@@ -273,6 +273,6 @@ export const adminApi = {
     (await api.put<Testimonial>(`/admin/testimonials/${id}`, payload)).data,
   deleteTestimonial: async (id: string) => (await api.delete(`/admin/testimonials/${id}`)).data,
 
-  uploadImage: async (image: string, folder = "webmitra", options?: { removeBackground?: boolean }) =>
-    (await api.post<{ url: string }>("/admin/upload", { image, folder, removeBackground: options?.removeBackground })).data.url,
+  uploadImage: async (image: string, folder = "webmitra") =>
+    (await api.post<{ url: string }>("/admin/upload", { image, folder })).data.url,
 };

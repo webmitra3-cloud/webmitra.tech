@@ -95,7 +95,6 @@ router.post(
     z.object({
       image: z.string().min(1),
       folder: z.string().optional(),
-      removeBackground: z.boolean().optional(),
     }),
   ),
   uploadImageController,
