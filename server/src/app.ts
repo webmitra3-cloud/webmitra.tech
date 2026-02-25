@@ -1,5 +1,5 @@
 import cookieParser from "cookie-parser";
-import cors from "cors";
+import cors, { CorsOptions } from "cors";
 import express from "express";
 import mongoSanitize from "express-mongo-sanitize";
 import helmet from "helmet";
@@ -16,21 +16,29 @@ const clientOriginEnv = process.env.CLIENT_ORIGIN || env.CLIENT_ORIGIN;
 const allowedOrigins = clientOriginEnv
   .split(",")
   .map((origin) => origin.trim())
-  .filter(Boolean);
+  .filter(Boolean)
+  .map((origin) => origin.replace(/\/+$/, ""));
 
+// Render runs behind a reverse proxy, and secure cookies / real client IPs rely on trusting it.
 app.set("trust proxy", 1);
 
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      if (!origin) return callback(null, true);
-      if (allowedOrigins.includes(origin)) return callback(null, true);
-      return callback(new Error("Not allowed by CORS"));
-    },
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE"],
-  }),
-);
+const corsOptions: CorsOptions = {
+  // Vercel frontend origin(s) configured via CLIENT_ORIGIN.
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true);
+    const normalizedOrigin = origin.replace(/\/+$/, "");
+    if (allowedOrigins.includes(normalizedOrigin)) return callback(null, true);
+    return callback(new Error("Not allowed by CORS"));
+  },
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization", "X-CSRF-Token"],
+  optionsSuccessStatus: 204,
+};
+
+// CORS must be applied before routes so every API response includes the correct headers.
+app.use(cors(corsOptions));
+app.options("*", cors(corsOptions));
 
 app.use(
   helmet({

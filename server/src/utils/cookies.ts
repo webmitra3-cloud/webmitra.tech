@@ -1,13 +1,16 @@
 import { CookieOptions } from "express";
 import { env, isProduction } from "../config/env";
 
-// Cookie options are environment-driven:
-// - `secure` is enabled in production
-// - `domain` can be set via COOKIE_DOMAIN for shared subdomains
+const cookieDomain = process.env.COOKIE_DOMAIN || env.COOKIE_DOMAIN;
+const nodeEnv = process.env.NODE_ENV || env.NODE_ENV;
+const isCrossSiteDeployment = nodeEnv === "production";
+
+// Render API + Vercel frontend are cross-site.
+// Browsers require SameSite=None + Secure=true for cross-site cookies.
 const commonCookieOptions: CookieOptions = {
-  sameSite: "lax",
-  secure: isProduction,
-  domain: env.COOKIE_DOMAIN,
+  sameSite: isCrossSiteDeployment ? "none" : "lax",
+  secure: isCrossSiteDeployment ? true : isProduction,
+  domain: cookieDomain || undefined,
   path: "/",
 };
 
