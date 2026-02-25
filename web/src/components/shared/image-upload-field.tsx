@@ -3,6 +3,7 @@ import { Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { adminApi } from "@/lib/api";
 import { fileToDataUrl } from "@/lib/file";
+import { getLogoDisplayUrl } from "@/lib/media";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,6 +18,7 @@ type ImageUploadFieldProps = {
 export function ImageUploadField({ label, value, onChange, folder = "webmitra" }: ImageUploadFieldProps) {
   const [uploading, setUploading] = useState(false);
   const isLogoFolder = folder.toLowerCase() === "logo";
+  const previewUrl = isLogoFolder ? getLogoDisplayUrl(value) : value;
 
   const uploadDataUri = async (dataUri: string) => {
     const url = await adminApi.uploadImage(dataUri, folder);
@@ -84,7 +86,7 @@ export function ImageUploadField({ label, value, onChange, folder = "webmitra" }
 
       {value ? (
         <img
-          src={value}
+          src={previewUrl}
           alt={label}
           className={`h-28 w-full rounded-md border border-border sm:h-40 ${
             isLogoFolder ? "bg-secondary/45 object-contain p-2" : "object-cover"
