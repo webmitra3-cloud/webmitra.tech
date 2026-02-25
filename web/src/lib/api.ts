@@ -24,11 +24,26 @@ import {
 type RetryConfig = InternalAxiosRequestConfig & { _retry?: boolean; _csrfRetry?: boolean };
 
 function buildApiBaseUrl(origin?: string) {
-  const normalizedOrigin = (origin || "").trim().replace(/\/+$/, "");
-  return `${normalizedOrigin}/api`;
+  const normalizedOrigin = (origin || "").trim().replace(/\/+$/, "").replace(/\/api$/i, "");
+  return normalizedOrigin ? `${normalizedOrigin}/api` : "/api";
 }
 
-const apiBaseUrl = buildApiBaseUrl(import.meta.env.VITE_API_URL || "http://localhost:5000");
+function resolveApiBaseUrl() {
+  const configuredOrigin = (import.meta.env.VITE_API_URL || "").trim();
+  if (configuredOrigin) {
+    return buildApiBaseUrl(configuredOrigin);
+  }
+
+  if (import.meta.env.PROD) {
+    // Prevent accidental production calls to localhost when env is missing.
+    console.error("[api] Missing VITE_API_URL. Falling back to same-origin /api.");
+  }
+
+  const browserOrigin = typeof window !== "undefined" ? window.location.origin : "";
+  return buildApiBaseUrl(browserOrigin);
+}
+
+const apiBaseUrl = resolveApiBaseUrl();
 
 export const api = axios.create({
   baseURL: apiBaseUrl,

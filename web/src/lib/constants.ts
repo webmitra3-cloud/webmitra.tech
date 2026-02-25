@@ -1,49 +1,14 @@
 import { SiteSettings } from "@/types";
 
-const DEFAULT_DEV_API_ORIGIN = "http://localhost:5000";
-const DEFAULT_PROD_API_ORIGIN = "https://webmitratech.onrender.com";
-
 export function normalizeApiOrigin(url?: string): string {
   const value = (url || "").trim();
   return value.replace(/\/+$/, "").replace(/\/api$/i, "");
 }
 
-function isLocalOrPrivateApiOrigin(origin: string) {
-  try {
-    const parsed = new URL(origin);
-    const host = parsed.hostname.toLowerCase();
-
-    if (host === "localhost" || host === "::1" || host.endsWith(".local")) return true;
-    if (/^127\./.test(host)) return true;
-    if (/^10\./.test(host)) return true;
-    if (/^192\.168\./.test(host)) return true;
-
-    const match172 = host.match(/^172\.(\d+)\./);
-    if (match172) {
-      const secondOctet = Number(match172[1]);
-      if (secondOctet >= 16 && secondOctet <= 31) return true;
-    }
-
-    return false;
-  } catch {
-    return false;
-  }
-}
-
-const rawConfiguredOrigin =
-  import.meta.env.VITE_API_URL ||
-  import.meta.env.VITE_API_BASE_URL ||
-  (import.meta.env.PROD ? DEFAULT_PROD_API_ORIGIN : DEFAULT_DEV_API_ORIGIN);
-
-const normalizedConfiguredOrigin = normalizeApiOrigin(rawConfiguredOrigin);
-const safeConfiguredOrigin =
-  import.meta.env.PROD && isLocalOrPrivateApiOrigin(normalizedConfiguredOrigin)
-    ? DEFAULT_PROD_API_ORIGIN
-    : normalizedConfiguredOrigin;
-
-const normalizedOrigin = normalizeApiOrigin(safeConfiguredOrigin);
-
-export const API_BASE_URL = `${normalizedOrigin}/api`;
+const configuredOrigin = normalizeApiOrigin(import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || "");
+const fallbackOrigin = typeof window !== "undefined" ? normalizeApiOrigin(window.location.origin) : "";
+const normalizedOrigin = configuredOrigin || fallbackOrigin;
+export const API_BASE_URL = normalizedOrigin ? `${normalizedOrigin}/api` : "/api";
 
 export const defaultSettings: SiteSettings = {
   companyName: "WebMitra.Tech",
