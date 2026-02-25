@@ -16,6 +16,11 @@ import { FAILED_ATTEMPT_TYPE, INQUIRY_STATUS, ROLES, TEAM_TYPES } from "../const
 import { hashValue } from "../utils/password";
 import { logger } from "../utils/logger";
 
+type AdminSeedInput = {
+  email?: string;
+  password?: string;
+};
+
 async function seedSiteSettings() {
   await SiteSettingsModel.findOneAndUpdate(
     {},
@@ -108,13 +113,21 @@ async function dropLegacyIdIndexes() {
 }
 
 async function seedAdminUser() {
+  const email = (env.ADMIN_SEED_EMAIL || "").trim().toLowerCase();
+  const password = env.ADMIN_SEED_PASSWORD || "";
+
+  if (!email || !password) {
+    logger.warn("Admin seed skipped: ADMIN_SEED_EMAIL or ADMIN_SEED_PASSWORD is missing.");
+    return;
+  }
+
   await UserModel.findOneAndUpdate(
-    { email: env.ADMIN_SEED_EMAIL },
+    { email },
     {
       name: "WebMitra.Tech Admin",
-      email: env.ADMIN_SEED_EMAIL,
+      email,
       role: ROLES.ADMIN,
-      passwordHash: await hashValue(env.ADMIN_SEED_PASSWORD),
+      passwordHash: await hashValue(password),
     },
     {
       upsert: true,
@@ -122,6 +135,33 @@ async function seedAdminUser() {
       setDefaultsOnInsert: true,
     },
   );
+}
+
+export async function seedAdminIfNotExists(input: AdminSeedInput = {}): Promise<void> {
+  const email = (input.email ?? process.env.ADMIN_SEED_EMAIL ?? env.ADMIN_SEED_EMAIL ?? "")
+    .trim()
+    .toLowerCase();
+  const password = input.password ?? process.env.ADMIN_SEED_PASSWORD ?? env.ADMIN_SEED_PASSWORD ?? "";
+
+  if (!email || !password) {
+    logger.warn("Admin startup seed skipped: ADMIN_SEED_EMAIL or ADMIN_SEED_PASSWORD is missing.");
+    return;
+  }
+
+  const existingAdmin = await UserModel.findOne({ email }).select("_id");
+  if (existingAdmin) {
+    logger.info("Admin already exists");
+    return;
+  }
+
+  await UserModel.create({
+    name: "WebMitra.Tech Admin",
+    email,
+    role: ROLES.ADMIN,
+    passwordHash: await hashValue(password),
+  });
+
+  logger.info("Admin created from startup seed");
 }
 
 async function seedEditorUsers() {
@@ -602,8 +642,10 @@ async function runSeed() {
   await disconnectDatabase();
 }
 
-runSeed().catch(async (error) => {
-  logger.error("Seed failed", error instanceof Error ? error.message : error);
-  await disconnectDatabase();
-  process.exit(1);
-});
+if (require.main === module) {
+  runSeed().catch(async (error) => {
+    logger.error("Seed failed", error instanceof Error ? error.message : error);
+    await disconnectDatabase();
+    process.exit(1);
+  });
+}
