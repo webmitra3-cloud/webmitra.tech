@@ -148,9 +148,15 @@ export async function seedAdminIfNotExists(input: AdminSeedInput = {}): Promise<
     return;
   }
 
-  const existingAdmin = await UserModel.findOne({ email }).select("_id");
+  const passwordHash = await hashValue(password);
+  const existingAdmin = await UserModel.findOne({ email }).select("_id role");
   if (existingAdmin) {
-    logger.info("Admin already exists");
+    await UserModel.findByIdAndUpdate(existingAdmin._id, {
+      name: "WebMitra.Tech Admin",
+      role: ROLES.ADMIN,
+      passwordHash,
+    });
+    logger.info("Admin already exists. Credentials synced from environment.");
     return;
   }
 
@@ -158,10 +164,59 @@ export async function seedAdminIfNotExists(input: AdminSeedInput = {}): Promise<
     name: "WebMitra.Tech Admin",
     email,
     role: ROLES.ADMIN,
-    passwordHash: await hashValue(password),
+    passwordHash,
   });
 
   logger.info("Admin created from startup seed");
+}
+
+export async function seedContentIfEmpty(): Promise<void> {
+  const [
+    settingsCount,
+    servicesCount,
+    projectsCount,
+    teamCount,
+    collaborationsCount,
+    pricingCount,
+    testimonialsCount,
+  ] = await Promise.all([
+    SiteSettingsModel.countDocuments(),
+    ServiceModel.countDocuments(),
+    ProjectModel.countDocuments(),
+    TeamMemberModel.countDocuments(),
+    CollaborationModel.countDocuments(),
+    PricingPlanModel.countDocuments(),
+    TestimonialModel.countDocuments(),
+  ]);
+
+  if (settingsCount === 0) {
+    await seedSiteSettings();
+    logger.info("Startup seed: Site settings inserted");
+  }
+  if (servicesCount === 0) {
+    await seedServices();
+    logger.info("Startup seed: Services inserted");
+  }
+  if (projectsCount === 0) {
+    await seedProjects();
+    logger.info("Startup seed: Projects inserted");
+  }
+  if (teamCount === 0) {
+    await seedTeam();
+    logger.info("Startup seed: Team and board members inserted");
+  }
+  if (collaborationsCount === 0) {
+    await seedCollaborations();
+    logger.info("Startup seed: Collaborations inserted");
+  }
+  if (pricingCount === 0) {
+    await seedPricing();
+    logger.info("Startup seed: Pricing plans inserted");
+  }
+  if (testimonialsCount === 0) {
+    await seedTestimonials();
+    logger.info("Startup seed: Testimonials inserted");
+  }
 }
 
 async function seedEditorUsers() {

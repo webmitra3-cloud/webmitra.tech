@@ -44,7 +44,8 @@ export const getCsrf = asyncHandler(async (req: Request, res: Response) => {
 });
 
 export const login = asyncHandler(async (req: Request, res: Response) => {
-  const { email, password } = req.body as { email: string; password: string };
+  const { email: rawEmail, password } = req.body as { email: string; password: string };
+  const email = rawEmail.trim().toLowerCase();
   const user = await UserModel.findOne({ email }).select("+passwordHash");
 
   if (!user || !(await compareHash(password, user.passwordHash))) {

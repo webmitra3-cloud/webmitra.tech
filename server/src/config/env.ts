@@ -28,6 +28,11 @@ const envSchema = z.object({
     .optional()
     .default("true")
     .transform((value) => value.toLowerCase() === "true"),
+  SEED_DUMMY_ON_STARTUP: z
+    .string()
+    .optional()
+    .default("true")
+    .transform((value) => value.toLowerCase() === "true"),
   CLOUDINARY_CLOUD_NAME: z.string().optional(),
   CLOUDINARY_API_KEY: z.string().optional(),
   CLOUDINARY_API_SECRET: z.string().optional(),
