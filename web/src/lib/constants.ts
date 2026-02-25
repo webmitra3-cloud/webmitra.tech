@@ -1,9 +1,22 @@
 import { SiteSettings } from "@/types";
 
-export const API_BASE_URL =
+const DEFAULT_API_ORIGIN = "http://localhost:5000";
+
+export function normalizeApiOrigin(url?: string): string {
+  const value = (url || "").trim();
+  return value.replace(/\/+$/, "");
+}
+
+const configuredOrigin =
   import.meta.env.VITE_API_URL ||
   import.meta.env.VITE_API_BASE_URL ||
-  "http://localhost:5000/api";
+  DEFAULT_API_ORIGIN;
+
+const normalizedOrigin = normalizeApiOrigin(configuredOrigin);
+
+export const API_BASE_URL = normalizedOrigin.endsWith("/api")
+  ? normalizedOrigin
+  : `${normalizedOrigin}/api`;
 
 export const defaultSettings: SiteSettings = {
   companyName: "WebMitra.Tech",
