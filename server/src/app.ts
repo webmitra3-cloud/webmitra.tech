@@ -6,6 +6,7 @@ import helmet from "helmet";
 import morgan from "morgan";
 import path from "path";
 import { env } from "./config/env";
+import { uploadsDir } from "./config/uploads";
 import { errorHandler } from "./middlewares/error.middleware";
 import { notFoundHandler } from "./middlewares/notFound.middleware";
 import { sanitizeInput } from "./middlewares/sanitize.middleware";
@@ -46,6 +47,12 @@ app.use(
   }),
 );
 app.use(morgan("dev"));
+
+// Admin uploads send base64 payloads that are much larger than normal API JSON bodies.
+// Keep the global body limit strict, but allow a larger limit only for this route.
+app.use("/api/admin/upload", express.json({ limit: "15mb" }));
+app.use("/api/admin/upload", express.urlencoded({ extended: true, limit: "15mb" }));
+
 app.use(express.json({ limit: "10kb" }));
 app.use(express.urlencoded({ extended: true, limit: "10kb" }));
 app.use(cookieParser());
@@ -56,7 +63,7 @@ app.get("/healthz", (_req, res) => {
   res.json({ ok: true });
 });
 
-app.use("/uploads", express.static(path.resolve(process.cwd(), "uploads")));
+app.use("/uploads", express.static(path.resolve(uploadsDir)));
 app.use("/api", apiRoutes);
 
 app.use(notFoundHandler);

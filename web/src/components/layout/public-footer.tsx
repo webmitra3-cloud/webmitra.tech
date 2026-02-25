@@ -58,6 +58,7 @@ export function PublicFooter() {
   const whatsappNumber = settings?.socials.whatsapp?.replace(/[^\d]/g, "") || "";
   const whatsappLink = whatsappNumber ? `https://wa.me/${whatsappNumber}` : "";
   const logoUrl = getLogoDisplayUrl(settings?.logoUrl || "");
+  const hasLogo = Boolean(logoUrl);
 
   const officeValueMap: Record<OfficeItemKey, string> = {
     address,
@@ -83,30 +84,38 @@ export function PublicFooter() {
     <footer className="border-t border-border/70 bg-slate-50/90 dark:bg-slate-950/95">
       <div className="container py-10 md:py-12">
         <div className="rounded-3xl border border-border/70 bg-white/90 shadow-soft backdrop-blur-sm dark:bg-slate-900/85">
-          <div className="grid gap-8 p-6 sm:p-8 md:grid-cols-2 xl:grid-cols-4">
-            <section>
-              <div className="flex items-start gap-3 sm:gap-4">
-                {logoUrl ? (
+          <div className="grid grid-cols-1 gap-8 p-6 sm:gap-10 sm:p-8 lg:grid-cols-2 xl:grid-cols-4">
+            <section className="min-w-0">
+              {hasLogo ? (
+                <div className="space-y-2.5">
                   <img
                     src={logoUrl}
                     alt={`${companyName} logo`}
-                    className="h-11 w-auto max-w-[120px] shrink-0 object-contain sm:max-w-[185px]"
+                    className="h-11 w-auto max-w-[170px] object-contain sm:max-w-[185px]"
                     loading="lazy"
                     onError={(event) => {
                       event.currentTarget.onerror = null;
                       if (settings?.logoUrl) event.currentTarget.src = settings.logoUrl;
                     }}
                   />
-                ) : (
+                  <p className="text-base font-semibold leading-tight text-foreground sm:text-lg" title={companyName}>
+                    {companyName}
+                  </p>
+                  <p className="text-sm text-muted-foreground">{locationLabel}</p>
+                </div>
+              ) : (
+                <div className="flex items-start gap-3 sm:gap-4">
                   <div className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-primary text-sm font-semibold text-primary-foreground">
                     WM
                   </div>
-                )}
-                <div className="flex-1">
-                  <p className="break-words text-lg font-semibold leading-tight text-foreground">{companyName}</p>
-                  <p className="mt-0.5 text-sm text-muted-foreground">{locationLabel}</p>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-base font-semibold leading-tight text-foreground sm:text-lg" title={companyName}>
+                      {companyName}
+                    </p>
+                    <p className="mt-0.5 text-sm text-muted-foreground">{locationLabel}</p>
+                  </div>
                 </div>
-              </div>
+              )}
 
               <p className="mt-3 text-sm text-muted-foreground">{tagline}</p>
 
@@ -135,7 +144,7 @@ export function PublicFooter() {
               </div>
             </section>
 
-            <section>
+            <section className="min-w-0">
               <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">{officeTitle}</p>
               <ul className="mt-3 space-y-2.5">
                 {footerOfficeItems.map((item) => {
@@ -161,7 +170,7 @@ export function PublicFooter() {
               </ul>
             </section>
 
-            <section>
+            <section className="min-w-0">
               <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">{capabilitiesTitle}</p>
               <ul className="mt-3 space-y-2">
                 {capabilities.map((item) => (
@@ -173,7 +182,7 @@ export function PublicFooter() {
               </ul>
             </section>
 
-            <section>
+            <section className="min-w-0">
               <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">{directContactTitle}</p>
               <div className="mt-3 space-y-2 text-sm">
                 <a href={`mailto:${email}`} className="inline-flex items-center gap-2 text-muted-foreground transition hover:text-foreground">
