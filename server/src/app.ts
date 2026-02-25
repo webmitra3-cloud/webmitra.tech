@@ -11,14 +11,60 @@ import { errorHandler } from "./middlewares/error.middleware";
 import { notFoundHandler } from "./middlewares/notFound.middleware";
 import { sanitizeInput } from "./middlewares/sanitize.middleware";
 import apiRoutes from "./routes";
+import { logger } from "./utils/logger";
 
 const app = express();
 const clientOriginEnv = process.env.CLIENT_ORIGIN || env.CLIENT_ORIGIN;
-const allowedOrigins = clientOriginEnv
+
+type OriginRule =
+  | { type: "exact"; value: string }
+  | { type: "wildcard"; protocol: "http" | "https"; hostSuffix: string };
+
+function normalizeOrigin(origin: string) {
+  return origin.trim().replace(/\/+$/, "").toLowerCase();
+}
+
+function parseOriginRule(origin: string): OriginRule | null {
+  const normalized = normalizeOrigin(origin);
+  if (!normalized) return null;
+
+  const wildcardMatch = normalized.match(/^(https?):\/\/\*\.(.+)$/);
+  if (wildcardMatch) {
+    const [, protocol, suffix] = wildcardMatch;
+    return { type: "wildcard", protocol: protocol as "http" | "https", hostSuffix: `.${suffix}` };
+  }
+
+  return { type: "exact", value: normalized };
+}
+
+function isOriginAllowed(origin: string, rules: OriginRule[]) {
+  const normalized = normalizeOrigin(origin);
+
+  if (rules.some((rule) => rule.type === "exact" && rule.value === normalized)) {
+    return true;
+  }
+
+  let parsed: URL;
+  try {
+    parsed = new URL(normalized);
+  } catch {
+    return false;
+  }
+
+  return rules.some((rule) => {
+    if (rule.type !== "wildcard") return false;
+    const protocolMatches = parsed.protocol === `${rule.protocol}:`;
+    const hostMatches = parsed.hostname === rule.hostSuffix.slice(1) || parsed.hostname.endsWith(rule.hostSuffix);
+    return protocolMatches && hostMatches;
+  });
+}
+
+const allowedOriginRules = clientOriginEnv
   .split(",")
   .map((origin) => origin.trim())
   .filter(Boolean)
-  .map((origin) => origin.replace(/\/+$/, ""));
+  .map(parseOriginRule)
+  .filter((rule): rule is OriginRule => Boolean(rule));
 
 // Render runs behind a reverse proxy, and secure cookies / real client IPs rely on trusting it.
 app.set("trust proxy", 1);
@@ -27,9 +73,11 @@ const corsOptions: CorsOptions = {
   // Vercel frontend origin(s) configured via CLIENT_ORIGIN.
   origin: (origin, callback) => {
     if (!origin) return callback(null, true);
-    const normalizedOrigin = origin.replace(/\/+$/, "");
-    if (allowedOrigins.includes(normalizedOrigin)) return callback(null, true);
-    return callback(new Error("Not allowed by CORS"));
+    if (isOriginAllowed(origin, allowedOriginRules)) return callback(null, true);
+
+    logger.warn("CORS blocked origin", { origin, configuredOrigins: clientOriginEnv });
+    // Do not throw an error here; just omit CORS headers so browser blocks it.
+    return callback(null, false);
   },
   credentials: true,
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],

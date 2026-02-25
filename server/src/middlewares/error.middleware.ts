@@ -29,6 +29,13 @@ export function errorHandler(error: unknown, _req: Request, res: Response, _next
     });
   }
 
+  if (error instanceof Error && error.message.toLowerCase().includes("cors")) {
+    return res.status(403).json({
+      ok: false,
+      message: "CORS blocked this request origin",
+    });
+  }
+
   if (errorRecord.type === "entity.too.large" || errorRecord.status === 413 || errorRecord.statusCode === 413) {
     return res.status(413).json({
       ok: false,

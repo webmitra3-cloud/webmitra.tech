@@ -7,7 +7,9 @@ const envSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   PORT: z.coerce.number().default(5000),
   MONGO_URI: z.string().min(1).default("mongodb://127.0.0.1:27017/webmitra"),
-  CLIENT_ORIGIN: z.string().url().default("http://localhost:5173"),
+  // Supports one or more origins separated by comma.
+  // Example: https://webmitra-tech-web.vercel.app,https://webmitra-tech-web-git-main-*.vercel.app
+  CLIENT_ORIGIN: z.string().min(1).default("http://localhost:5173"),
   COOKIE_DOMAIN: z.string().optional(),
   JWT_ACCESS_SECRET: z.string().min(16).default("dev-access-secret-change-this-12345"),
   JWT_REFRESH_SECRET: z.string().min(16).default("dev-refresh-secret-change-this-67890"),
