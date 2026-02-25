@@ -4,11 +4,23 @@ import { verifyMailerConnection } from "./config/mailer";
 import app from "./app";
 import { logger } from "./utils/logger";
 
+// Render settings:
+// Build Command: npm run build -w server
+// Start Command: npm run start -w server
+// Health Check Path: /healthz
 async function bootstrap() {
+  const port = Number(process.env.PORT) || env.PORT || 5000;
+  const host = "0.0.0.0";
+
   await connectDatabase();
-  await verifyMailerConnection();
-  app.listen(env.PORT, () => {
-    logger.info(`Server listening on http://localhost:${env.PORT}`);
+  try {
+    await verifyMailerConnection();
+  } catch (error) {
+    logger.warn("Mail provider verification failed. Continuing startup.", error instanceof Error ? error.message : String(error));
+  }
+
+  app.listen(port, host, () => {
+    logger.info(`API server is running on ${host}:${port}`);
   });
 }
 

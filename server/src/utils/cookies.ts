@@ -1,6 +1,9 @@
 import { CookieOptions } from "express";
 import { env, isProduction } from "../config/env";
 
+// Cookie options are environment-driven:
+// - `secure` is enabled in production
+// - `domain` can be set via COOKIE_DOMAIN for shared subdomains
 const commonCookieOptions: CookieOptions = {
   sameSite: "lax",
   secure: isProduction,

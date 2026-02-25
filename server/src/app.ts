@@ -12,12 +12,21 @@ import { sanitizeInput } from "./middlewares/sanitize.middleware";
 import apiRoutes from "./routes";
 
 const app = express();
+const clientOriginEnv = process.env.CLIENT_ORIGIN || env.CLIENT_ORIGIN;
+const allowedOrigins = clientOriginEnv
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
 
 app.set("trust proxy", 1);
 
 app.use(
   cors({
-    origin: env.CLIENT_ORIGIN,
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes(origin)) return callback(null, true);
+      return callback(new Error("Not allowed by CORS"));
+    },
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE"],
   }),
@@ -34,6 +43,10 @@ app.use(express.urlencoded({ extended: true, limit: "10kb" }));
 app.use(cookieParser());
 app.use(mongoSanitize());
 app.use(sanitizeInput);
+
+app.get("/healthz", (_req, res) => {
+  res.json({ ok: true });
+});
 
 app.use("/uploads", express.static(path.resolve(process.cwd(), "uploads")));
 app.use("/api", apiRoutes);
