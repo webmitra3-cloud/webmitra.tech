@@ -39,7 +39,7 @@ const ProjectsPage = lazy(() => import("@/pages/public/projects-page").then((mod
 const ServicesPage = lazy(() => import("@/pages/public/services-page").then((module) => ({ default: module.ServicesPage })));
 const TeamPage = lazy(() => import("@/pages/public/team-page").then((module) => ({ default: module.TeamPage })));
 const NotFoundPage = lazy(() => import("@/pages/not-found-page").then((module) => ({ default: module.NotFoundPage })));
-
+console.log("VITE_API_URL =", import.meta.env.VITE_API_URL);
 export default function App() {
   return (
     <>

@@ -40,6 +40,10 @@ function parseOriginRule(origin: string): OriginRule | null {
 function isOriginAllowed(origin: string, rules: OriginRule[]) {
   const normalized = normalizeOrigin(origin);
 
+  if (isAllowedVercelPreviewOrigin(normalized)) {
+    return true;
+  }
+
   if (rules.some((rule) => rule.type === "exact" && rule.value === normalized)) {
     return true;
   }
@@ -57,6 +61,16 @@ function isOriginAllowed(origin: string, rules: OriginRule[]) {
     const hostMatches = parsed.hostname === rule.hostSuffix.slice(1) || parsed.hostname.endsWith(rule.hostSuffix);
     return protocolMatches && hostMatches;
   });
+}
+
+function isAllowedVercelPreviewOrigin(origin: string) {
+  try {
+    const parsed = new URL(origin);
+    const host = parsed.hostname.toLowerCase();
+    return host.endsWith(".vercel.app") && host.includes("webmitra-tech");
+  } catch {
+    return false;
+  }
 }
 
 const allowedOriginRules = clientOriginEnv
