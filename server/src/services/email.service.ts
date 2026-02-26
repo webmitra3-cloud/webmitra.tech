@@ -11,11 +11,6 @@ type InquiryMailPayload = {
   message: string;
 };
 
-function normalizeSubject(subject?: string) {
-  const trimmed = (subject || "").trim();
-  return trimmed || "General Inquiry";
-}
-
 function escapeHtml(value: string) {
   return value
     .replace(/&/g, "&amp;")
@@ -90,6 +85,7 @@ async function sendMail(payload: {
   subject: string;
   text: string;
   html: string;
+  replyTo?: string;
 }) {
   ensureResendConfigured();
 
@@ -100,6 +96,7 @@ async function sendMail(payload: {
       subject: payload.subject,
       text: payload.text,
       html: payload.html,
+      replyTo: payload.replyTo,
     });
   } catch (error) {
     logger.error("Email delivery failed", error instanceof Error ? error.message : "Unknown error");
@@ -108,22 +105,31 @@ async function sendMail(payload: {
 }
 
 export async function sendInquiryNotification(payload: InquiryMailPayload): Promise<void> {
-  const subject = normalizeSubject(payload.subject);
+  const subject = (payload.subject || "").trim() || "General Inquiry";
   const submittedAt = new Date().toISOString();
+  const senderName = payload.name || "Unknown";
 
   await sendMail({
     to: env.MAIL_TO,
-    subject: `[WebMitra Tech Inquiry] ${subject}`,
+    subject: `New Contact Inquiry from ${senderName}`,
     text: formatNotificationText(payload, subject, submittedAt),
     html: formatNotificationHtml(payload, subject, submittedAt),
+    replyTo: payload.email,
   });
 
   if (!env.AUTO_REPLY_ENABLED) return;
 
-  await sendMail({
-    to: payload.email,
-    subject: "We received your message - WebMitra Tech",
-    text: formatAutoReplyText(payload),
-    html: formatAutoReplyHtml(payload),
-  });
+  try {
+    await sendMail({
+      to: payload.email,
+      subject: "We received your message - WebMitra Tech",
+      text: formatAutoReplyText(payload),
+      html: formatAutoReplyHtml(payload),
+    });
+  } catch (error) {
+    logger.error(
+      "Contact auto-reply delivery failed",
+      error instanceof Error ? error.message : "Unknown error",
+    );
+  }
 }
