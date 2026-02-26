@@ -117,19 +117,10 @@ export async function sendInquiryNotification(payload: InquiryMailPayload): Prom
     replyTo: payload.email,
   });
 
-  if (!env.AUTO_REPLY_ENABLED) return;
-
-  try {
-    await sendMail({
-      to: payload.email,
-      subject: "We received your message - WebMitra Tech",
-      text: formatAutoReplyText(payload),
-      html: formatAutoReplyHtml(payload),
-    });
-  } catch (error) {
-    logger.error(
-      "Contact auto-reply delivery failed",
-      error instanceof Error ? error.message : "Unknown error",
-    );
-  }
+  await sendMail({
+    to: payload.email,
+    subject: "We received your message - WebMitra Tech",
+    text: formatAutoReplyText(payload),
+    html: formatAutoReplyHtml(payload),
+  });
 }
